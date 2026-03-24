@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('dashboard route shows product title', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: /therapieland user flow insights/i })
+  ).toBeInTheDocument();
+});
+
+test('dashboard shows empty message when no local data', () => {
+  render(<App />);
+  expect(screen.getAllByText(/nog geen data beschikbaar/i).length).toBeGreaterThan(0);
 });
