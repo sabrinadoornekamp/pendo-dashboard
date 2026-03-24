@@ -709,6 +709,15 @@ export function getAnthropicMessagesUrl() {
   if (process.env.NODE_ENV === 'development') {
     return '/v1/messages';
   }
+  // Production: same-origin proxy (e.g. Vercel `api/messages.js`). Anthropic has no CORS for browsers.
+  const proxyPath =
+    process.env.REACT_APP_ANTHROPIC_PROXY_PATH || '/api/messages';
+  if (/^https?:\/\//i.test(proxyPath)) {
+    return proxyPath;
+  }
+  if (proxyPath) {
+    return proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`;
+  }
   const base =
     process.env.REACT_APP_ANTHROPIC_API_URL || 'https://api.anthropic.com';
   return `${base.replace(/\/$/, '')}/v1/messages`;
@@ -810,8 +819,12 @@ export async function fetchPijnpuntenAnalysis(
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401) {
+      const hint =
+        process.env.NODE_ENV === 'development'
+          ? 'Controleer REACT_APP_ANTHROPIC_API_KEY in `.env` (geen aanhalingstekens, geen spaties rond `=`). Sla op en herstart `npm start`.'
+          : 'Controleer in Vercel → Settings → Environment Variables: `ANTHROPIC_API_KEY` (aanbevolen) of `REACT_APP_ANTHROPIC_API_KEY`. Daarna opnieuw deployen.';
       throw new Error(
-        'Anthropic weigerde de aanvraag (401 Unauthorized). Controleer REACT_APP_ANTHROPIC_API_KEY in `.env`: juiste sleutel, geen aanhalingstekens rond de waarde, geen spaties voor/na de sleutel. Sla `.env` op en herstart daarna `npm start` (CRA leest env alleen bij start).'
+        `Anthropic weigerde de aanvraag (401 Unauthorized). ${hint}`
       );
     }
     if (res.status === 429) {
@@ -821,7 +834,7 @@ export async function fetchPijnpuntenAnalysis(
     }
     if (res.status === 502 || res.status === 520) {
       throw new Error(
-        `De verbinding met Anthropic mislukte (${res.status}). Herstart de dev-server na wijzigingen aan setupProxy; controleer netwerk/VPN; of probeer het zo opnieuw.`
+        `De verbinding met Anthropic mislukte (${res.status}). Lokaal: herstart de dev-server na wijzigingen aan setupProxy. Op Vercel: bekijk de logs van de functie \`api/messages\`; controleer netwerk of timeouts.`
       );
     }
     const msg =
