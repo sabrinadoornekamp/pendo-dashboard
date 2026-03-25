@@ -480,6 +480,10 @@ export default function DashboardPage() {
           <Link to="/upload" className="text-link">
             Naar upload (analisten)
           </Link>
+          {' · '}
+          <Link to="/changelog" className="text-link">
+            Changelog
+          </Link>
         </p>
       </div>
     );
@@ -620,6 +624,9 @@ export default function DashboardPage() {
             className="tl-sidebar__footer-link"
           >
             Data bijwerken
+          </Link>
+          <Link to="/changelog" className="tl-sidebar__footer-link">
+            Changelog
           </Link>
           {flowMetrics?.ok && (
             <p className="tl-sidebar__stat">

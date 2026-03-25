@@ -15,4 +15,17 @@ module.exports = function setupProxy(app) {
       proxyTimeout: 120000,
     })
   );
+
+  // Pendo EU API: browser → same origin in dev (Pendo stuurt geen CORS voor localhost).
+  app.use(
+    '/pendo-api',
+    createProxyMiddleware({
+      target: 'https://app.eu.pendo.io',
+      changeOrigin: true,
+      secure: true,
+      pathRewrite: { '^/pendo-api': '/api/v1' },
+      timeout: 60000,
+      proxyTimeout: 60000,
+    })
+  );
 };

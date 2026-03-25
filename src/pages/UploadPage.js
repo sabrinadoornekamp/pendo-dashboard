@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import Papa from 'papaparse';
 import {
   REPORT_FLOW_GROUPS,
   createReport,
@@ -8,9 +7,13 @@ import {
   loadReport,
   loadReportsStore,
   persistReportPatch,
-  parseFeatureCsvResults,
   updateReportTitle,
 } from '../lib/flowData';
+import {
+  fetchPendoFeatures,
+  fetchPendoFunnels,
+  normalizePendoFunnelForReport,
+} from '../lib/pendoApi';
 import {
   addImagesToReport,
   deleteReportImage,
@@ -22,6 +25,7 @@ import {
 const UPLOAD_PASSWORD = 'therapieland2025';
 const SESSION_KEY = 'tl_analyst_session';
 const NEW_VALUE = '__new__';
+const LS_PENDO_SYNC = 'tl_userflow_pendo_sync';
 
 function readSessionUnlocked() {
   try {
@@ -57,6 +61,11 @@ export default function UploadPage() {
 
   const [funnelError, setFunnelError] = useState(null);
   const [featureError, setFeatureError] = useState(null);
+  const [pendoError, setPendoError] = useState(null);
+  const [pendoLoading, setPendoLoading] = useState(false);
+  const [pendoFunnels, setPendoFunnels] = useState([]);
+  const [selectedPendoFunnelId, setSelectedPendoFunnelId] = useState('');
+  const [lastPendoSyncAt, setLastPendoSyncAt] = useState(null);
   const [storageError, setStorageError] = useState(null);
   const [saveMessage, setSaveMessage] = useState(null);
 
@@ -95,6 +104,7 @@ export default function UploadPage() {
 
   const activeReportId =
     selectedKey && selectedKey !== NEW_VALUE ? selectedKey : null;
+  const pendoApiKey = (process.env.REACT_APP_PENDO_API_KEY || '').trim();
 
   const submitPassword = (e) => {
     e.preventDefault();
@@ -166,67 +176,137 @@ export default function UploadPage() {
     flashSaved('Titel opgeslagen.');
   };
 
-  const handleFunnelFile = useCallback(
-    (file) => {
-      setFunnelError(null);
-      setStorageError(null);
-      if (!file) return;
-      if (!activeReportId) {
-        setFunnelError('Selecteer of maak eerst een dashboard met een titel.');
-        return;
-      }
-      file
-        .text()
-        .then((text) => {
-          const result = persistReportPatch(activeReportId, { funnelCsv: text });
-          if (!result.ok) {
-            setFunnelError(result.message);
-            return;
-          }
-          bumpReports();
-          flashSaved('Funneldata is opgeslagen.');
-        })
-        .catch(() =>
-          setFunnelError('Het bestand kon niet worden gelezen.')
-        );
-    },
-    [activeReportId, bumpReports, flashSaved]
-  );
+  useEffect(() => {
+    if (!activeReportId) {
+      setLastPendoSyncAt(null);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(LS_PENDO_SYNC);
+      const map = raw ? JSON.parse(raw) : {};
+      setLastPendoSyncAt(map?.[activeReportId]?.syncedAt || null);
+    } catch {
+      setLastPendoSyncAt(null);
+    }
+  }, [activeReportId, saveMessage]);
 
-  const handleFeatureFile = useCallback(
-    (file) => {
-      setFeatureError(null);
-      setStorageError(null);
-      if (!file) return;
-      if (!activeReportId) {
-        setFeatureError('Selecteer of maak eerst een dashboard met een titel.');
-        return;
+  const handleRefreshPendoData = useCallback(async () => {
+    setPendoError(null);
+    setFunnelError(null);
+    setFeatureError(null);
+    setStorageError(null);
+    if (!activeReportId) {
+      setPendoError('Selecteer of maak eerst een dashboard met een titel.');
+      return;
+    }
+    if (!pendoApiKey) {
+      setPendoError(
+        'Pendo API key ontbreekt. Zet REACT_APP_PENDO_API_KEY in .env en herstart npm start.'
+      );
+      return;
+    }
+
+    setPendoLoading(true);
+    const ac = new AbortController();
+    try {
+      const [funnels, features] = await Promise.all([
+        fetchPendoFunnels(pendoApiKey, ac.signal),
+        fetchPendoFeatures(pendoApiKey, ac.signal),
+      ]);
+      if (!funnels.length) {
+        throw new Error('Geen funnels ontvangen van Pendo.');
       }
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: 'greedy',
-        complete: (results) => {
-          const parsed = parseFeatureCsvResults(results);
-          if (!parsed.ok) {
-            setFeatureError(parsed.error);
-            return;
-          }
-          const result = persistReportPatch(activeReportId, {
-            features: parsed.data,
-          });
-          if (!result.ok) {
-            setFeatureError(result.message);
-            return;
-          }
-          bumpReports();
-          flashSaved('Feature-adoptiedata is opgeslagen.');
-        },
-        error: (err) =>
-          setFeatureError(err.message || 'CSV kon niet worden gelezen.'),
+      if (!features.length) {
+        throw new Error('Geen feature-adoptiedata ontvangen van Pendo.');
+      }
+
+      setPendoFunnels(funnels);
+      const preferredId =
+        selectedPendoFunnelId && funnels.some((f) => f.id === selectedPendoFunnelId)
+          ? selectedPendoFunnelId
+          : funnels[0].id;
+      setSelectedPendoFunnelId(preferredId);
+      const selectedRaw = funnels.find((f) => f.id === preferredId)?.raw;
+      const normalizedFunnel = normalizePendoFunnelForReport(selectedRaw);
+      if (!normalizedFunnel) {
+        throw new Error(
+          'Gekozen funnel bevat geen bruikbare stapdata (stap + gebruikers).'
+        );
+      }
+
+      const saved = persistReportPatch(activeReportId, {
+        funnel: normalizedFunnel,
+        features,
       });
-    },
-    [activeReportId, bumpReports, flashSaved]
-  );
+      if (!saved.ok) {
+        throw new Error(saved.message || 'Opslaan van Pendo-data mislukte.');
+      }
+      const syncedAt = new Date().toISOString();
+      try {
+        const raw = localStorage.getItem(LS_PENDO_SYNC);
+        const map = raw ? JSON.parse(raw) : {};
+        map[activeReportId] = {
+          syncedAt,
+          funnelId: preferredId,
+          funnelName: funnels.find((f) => f.id === preferredId)?.name || null,
+        };
+        localStorage.setItem(LS_PENDO_SYNC, JSON.stringify(map));
+      } catch {
+        /* ignore metadata storage errors */
+      }
+      setLastPendoSyncAt(syncedAt);
+      bumpReports();
+      flashSaved('Pendo-data ververst en opgeslagen.');
+    } catch (e) {
+      setPendoError(e?.message || 'Pendo-data ophalen mislukte.');
+    } finally {
+      setPendoLoading(false);
+      ac.abort();
+    }
+  }, [
+    activeReportId,
+    bumpReports,
+    flashSaved,
+    pendoApiKey,
+    selectedPendoFunnelId,
+  ]);
+
+  const handleSelectedFunnelApply = useCallback(() => {
+    setPendoError(null);
+    setStorageError(null);
+    if (!activeReportId) {
+      setPendoError('Selecteer of maak eerst een dashboard met een titel.');
+      return;
+    }
+    const selectedRaw = pendoFunnels.find((f) => f.id === selectedPendoFunnelId)?.raw;
+    const normalizedFunnel = normalizePendoFunnelForReport(selectedRaw);
+    if (!normalizedFunnel) {
+      setPendoError('Geselecteerde funnel bevat geen bruikbare stapdata.');
+      return;
+    }
+    const res = persistReportPatch(activeReportId, { funnel: normalizedFunnel });
+    if (!res.ok) {
+      setPendoError(res.message || 'Opslaan van funnel mislukt.');
+      return;
+    }
+    const syncedAt = new Date().toISOString();
+    try {
+      const raw = localStorage.getItem(LS_PENDO_SYNC);
+      const map = raw ? JSON.parse(raw) : {};
+      map[activeReportId] = {
+        syncedAt,
+        funnelId: selectedPendoFunnelId || null,
+        funnelName:
+          pendoFunnels.find((f) => f.id === selectedPendoFunnelId)?.name || null,
+      };
+      localStorage.setItem(LS_PENDO_SYNC, JSON.stringify(map));
+    } catch {
+      /* ignore */
+    }
+    setLastPendoSyncAt(syncedAt);
+    bumpReports();
+    flashSaved('Geselecteerde funnel toegepast op dit dashboard.');
+  }, [activeReportId, bumpReports, flashSaved, pendoFunnels, selectedPendoFunnelId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,6 +417,10 @@ export default function UploadPage() {
         <p className="page__footer-note">
           <Link to="/" className="text-link">
             Terug naar dashboard
+          </Link>
+          {' · '}
+          <Link to="/changelog" className="text-link">
+            Changelog
           </Link>
         </p>
       </div>
@@ -485,39 +569,62 @@ export default function UploadPage() {
       </section>
 
       <section className="panel">
-        <h2 className="panel__title">CSV-uploads</h2>
+        <h2 className="panel__title">Pendo API</h2>
         <p className="panel__hint">
-          Elke geslaagde upload wordt direct opgeslagen voor het geselecteerde
-          dashboard.
+          Haal live funnel- en featuredata op vanuit Pendo en sla direct op voor
+          het geselecteerde dashboard.
         </p>
         <div className="upload-row">
-          <label className="file-button">
-            Funnel-CSV kiezen
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => {
-                handleFunnelFile(e.target.files?.[0]);
-                e.target.value = '';
-              }}
-            />
-          </label>
-          <label className="file-button file-button--secondary">
-            Feature adoption CSV kiezen
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => {
-                handleFeatureFile(e.target.files?.[0]);
-                e.target.value = '';
-              }}
-            />
-          </label>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={handleRefreshPendoData}
+            disabled={pendoLoading || !activeReportId}
+          >
+            {pendoLoading ? 'Verversen…' : 'Ververs data'}
+          </button>
         </div>
-        {(funnelError || featureError) && (
+        {!!activeReportId && (
+          <p className="panel__status">
+            {lastPendoSyncAt
+              ? `Laatste synchronisatie: ${new Date(lastPendoSyncAt).toLocaleString('nl-NL')}`
+              : 'Nog niet gesynchroniseerd met Pendo.'}
+          </p>
+        )}
+        {pendoFunnels.length > 0 && (
+          <div className="report-picker">
+            <label className="field-label" htmlFor="pendo-funnel-select">
+              Te tonen funnel
+            </label>
+            <div className="report-new-row">
+              <select
+                id="pendo-funnel-select"
+                className="select-input text-input--flex"
+                value={selectedPendoFunnelId}
+                onChange={(e) => setSelectedPendoFunnelId(e.target.value)}
+              >
+                {pendoFunnels.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={handleSelectedFunnelApply}
+                disabled={!selectedPendoFunnelId || !activeReportId}
+              >
+                Toepassen
+              </button>
+            </div>
+          </div>
+        )}
+        {(funnelError || featureError || pendoError) && (
           <div className="inline-errors">
             {funnelError && <p className="error">{funnelError}</p>}
             {featureError && <p className="error">{featureError}</p>}
+            {pendoError && <p className="error">{pendoError}</p>}
           </div>
         )}
       </section>
@@ -584,6 +691,10 @@ export default function UploadPage() {
       <p className="page__footer-note">
         <Link to="/" className="text-link">
           Naar openbaar dashboard
+        </Link>
+        {' · '}
+        <Link to="/changelog" className="text-link">
+          Changelog
         </Link>
       </p>
     </div>

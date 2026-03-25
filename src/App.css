@@ -1504,3 +1504,84 @@
 .tl-details-ai__hint {
   margin-top: 0.35rem;
 }
+
+/* Changelog */
+.page--changelog {
+  max-width: 720px;
+}
+
+.inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+  background: #f1f5f9;
+  padding: 0.12em 0.35em;
+  border-radius: 4px;
+  color: #334155;
+}
+
+.changelog-panel {
+  margin-top: 1.25rem;
+}
+
+.changelog-meta {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.changelog-meta strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+.changelog-error {
+  margin: 0;
+  color: #b45309;
+  line-height: 1.5;
+}
+
+.changelog-empty {
+  margin: 0;
+}
+
+.changelog-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changelog-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.changelog-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.changelog-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.changelog-item__date {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.changelog-item__hash {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.changelog-item__subject {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #0f172a;
+}

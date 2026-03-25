@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-03-25T12:19:06.739Z",
+  "source": "git",
+  "repositoryUrl": "https://github.com/sabrinadoornekamp/pendo-dashboard",
+  "commits": [
+    {
+      "hash": "aae2ac9aad1c69a405af7b3187693fd6f8022713",
+      "shortHash": "aae2ac9",
+      "date": "2026-03-24T18:49:24.000Z",
+      "subject": "fix(vercel): proxy Anthropic Messages API to avoid browser CORS"
+    },
+    {
+      "hash": "85c43ff7d7009d728627e8b32a8713a5c6265fbb",
+      "shortHash": "85c43ff",
+      "date": "2026-03-24T18:27:58.000Z",
+      "subject": "Prepare for Vercel deploy"
+    },
+    {
+      "hash": "149b847bbff49c04b8b9fbb65a9dfe377cacc9c2",
+      "shortHash": "149b847",
+      "date": "2026-03-24T12:22:06.000Z",
+      "subject": "Initialize project using Create React App"
+    }
+  ]
+}

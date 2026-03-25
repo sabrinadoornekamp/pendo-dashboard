@@ -17,7 +17,10 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "changelog": "node scripts/generate-changelog.js",
+    "prestart": "node scripts/generate-changelog.js",
     "start": "react-scripts start",
+    "prebuild": "node scripts/generate-changelog.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
