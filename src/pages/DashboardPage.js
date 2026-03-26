@@ -692,7 +692,7 @@ export default function DashboardPage() {
                   className={`tl-tab${dashTab === 'funnel' ? ' tl-tab--active' : ''}`}
                   onClick={() => setDashTab('funnel')}
                 >
-                  Funnel-detail
+                  Rapportdata
                 </button>
                 <button
                   type="button"
@@ -812,7 +812,7 @@ export default function DashboardPage() {
                       </p>
                     )}
                   {funnelTablePending && !funnelTable && (
-                    <p className="tl-inline-hint">Funnel wordt geladen…</p>
+                    <p className="tl-inline-hint">Rapportdata wordt geladen…</p>
                   )}
 
                   {heroOpportunity && (
@@ -1055,7 +1055,7 @@ export default function DashboardPage() {
             funnelVisibleRows.length > 0 && (
               <details className="panel panel--raw-funnel">
                 <summary className="raw-funnel-summary">
-                  Ruwe funnel-export (volledige tabel)
+                  Ruwe rapportdata (volledige tabel)
                 </summary>
                 <p className="panel__hint">
                   Data exact zoals in de CSV-export. Handig voor audit of export

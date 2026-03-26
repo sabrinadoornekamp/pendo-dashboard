@@ -1,8 +1,14 @@
 {
-  "generatedAt": "2026-03-25T12:19:06.739Z",
+  "generatedAt": "2026-03-26T10:31:07.747Z",
   "source": "git",
   "repositoryUrl": "https://github.com/sabrinadoornekamp/pendo-dashboard",
   "commits": [
+    {
+      "hash": "0f4a5c1a7e6659e4ae7df6c4ad563f99827e4d22",
+      "shortHash": "0f4a5c1",
+      "date": "2026-03-25T12:20:24.000Z",
+      "subject": "feat: Pendo live sync, changelog page, dev Pendo proxy"
+    },
     {
       "hash": "aae2ac9aad1c69a405af7b3187693fd6f8022713",
       "shortHash": "aae2ac9",

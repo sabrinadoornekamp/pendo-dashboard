@@ -1585,3 +1585,136 @@
   line-height: 1.45;
   color: #0f172a;
 }
+
+/* Pendo catalog (upload) */
+.pendo-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.pendo-catalog {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pendo-catalog__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.pendo-kind-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pendo-suitable-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.pendo-catalog__list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.pendo-catalog__list li {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pendo-catalog__list li:last-child {
+  border-bottom: none;
+}
+
+.pendo-catalog__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+.pendo-catalog__row:hover {
+  background: #f8fafc;
+}
+
+.pendo-catalog__row input {
+  margin-top: 0.2rem;
+}
+
+.pendo-catalog__row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pendo-catalog__name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.92rem;
+}
+
+.pendo-catalog__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+}
+
+.pendo-catalog__badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+}
+
+.pendo-catalog__id {
+  font-size: 0.72rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.pendo-catalog__fit {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.pendo-catalog__fit--yes {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.pendo-catalog__fit--no {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.pendo-catalog__apply {
+  margin-top: 1rem;
+}

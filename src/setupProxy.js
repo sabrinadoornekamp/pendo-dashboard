@@ -28,4 +28,17 @@ module.exports = function setupProxy(app) {
       proxyTimeout: 60000,
     })
   );
+
+  // Pendo scoped API (zoals /api/s/<subscriptionId>/report in de UI).
+  app.use(
+    '/pendo-api-s',
+    createProxyMiddleware({
+      target: 'https://app.eu.pendo.io',
+      changeOrigin: true,
+      secure: true,
+      pathRewrite: { '^/pendo-api-s': '/api/s' },
+      timeout: 60000,
+      proxyTimeout: 60000,
+    })
+  );
 };
