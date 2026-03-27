@@ -22,8 +22,6 @@ import {
   loadReport,
   loadReportsStore,
   normalizeFunnelTableForReport,
-  pickDefaultReportId,
-  resolveEffectiveReportId,
   savePijnpuntenCache,
 } from '../lib/flowData';
 import {
@@ -175,15 +173,20 @@ export default function DashboardPage() {
     (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
   );
 
-  const reportSidebarGroups = useMemo(
-    () => groupReportsByFlowGroup(reports),
+  const liveReports = useMemo(
+    () => reports.filter((r) => hasDashboardData(r)),
     [reports]
   );
 
-  const effectiveReportId = resolveEffectiveReportId(
-    storeSnapshot,
-    paramId
+  const reportSidebarGroups = useMemo(
+    () => groupReportsByFlowGroup(liveReports),
+    [liveReports]
   );
+
+  const effectiveReportId = useMemo(() => {
+    if (paramId && liveReports.some((r) => r.id === paramId)) return paramId;
+    return liveReports[0]?.id || null;
+  }, [liveReports, paramId]);
 
   const report = effectiveReportId
     ? storeSnapshot.reports.find((r) => r.id === effectiveReportId) ?? null
@@ -286,10 +289,10 @@ export default function DashboardPage() {
   }, [effectiveReportId]);
 
   useEffect(() => {
-    if (paramId && storeSnapshot.reports.some((r) => r.id === paramId)) return;
-    const def = pickDefaultReportId(storeSnapshot);
+    if (paramId && liveReports.some((r) => r.id === paramId)) return;
+    const def = liveReports[0]?.id || null;
     if (def) setSearchParams({ report: def }, { replace: true });
-  }, [paramId, setSearchParams, storeSnapshot]);
+  }, [liveReports, paramId, setSearchParams]);
 
   useEffect(() => {
     const onStorage = (e) => {
@@ -458,7 +461,7 @@ export default function DashboardPage() {
     return () => ac.abort();
   }, [effectiveReportId, hasData, apiKey, updatedAt, storeRev]);
 
-  if (reports.length === 0) {
+  if (liveReports.length === 0) {
     return (
       <div className="page" data-store-rev={storeRev}>
         <header className="page__header page__header--dashboard">

@@ -1,8 +1,14 @@
 {
-  "generatedAt": "2026-03-27T09:43:36.039Z",
+  "generatedAt": "2026-03-27T09:55:14.128Z",
   "source": "git",
   "repositoryUrl": "https://github.com/sabrinadoornekamp/pendo-dashboard",
   "commits": [
+    {
+      "hash": "017ec848db564ac1f1288b3fa2ad34bce690467d",
+      "shortHash": "017ec84",
+      "date": "2026-03-27T09:49:08.000Z",
+      "subject": "feat(upload): manage live flows across dashboards"
+    },
     {
       "hash": "30d903b0ded505894b862b0b1419c28fd8c27847",
       "shortHash": "30d903b",
