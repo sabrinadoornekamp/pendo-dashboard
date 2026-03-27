@@ -1,8 +1,14 @@
 {
-  "generatedAt": "2026-03-27T09:23:19.467Z",
+  "generatedAt": "2026-03-27T09:43:36.039Z",
   "source": "git",
   "repositoryUrl": "https://github.com/sabrinadoornekamp/pendo-dashboard",
   "commits": [
+    {
+      "hash": "30d903b0ded505894b862b0b1419c28fd8c27847",
+      "shortHash": "30d903b",
+      "date": "2026-03-27T09:24:29.000Z",
+      "subject": "fix(ci): resolve UploadPage lint failures in Vercel build"
+    },
     {
       "hash": "e9599debe2ede84aa343ad3b74ee6dec5e89d3f4",
       "shortHash": "e9599de",

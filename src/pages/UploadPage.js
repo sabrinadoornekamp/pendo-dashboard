@@ -75,6 +75,7 @@ export default function UploadPage() {
   const [manualCsvError, setManualCsvError] = useState(null);
   const [selectedReportCsvFile, setSelectedReportCsvFile] = useState(null);
   const [selectedImageFiles, setSelectedImageFiles] = useState([]);
+  const [selectedLiveFlowKeys, setSelectedLiveFlowKeys] = useState([]);
   const [storageError, setStorageError] = useState(null);
   const [saveMessage, setSaveMessage] = useState(null);
 
@@ -144,21 +145,34 @@ export default function UploadPage() {
     [analyzedPendoCatalog, selectedCatalogId]
   );
 
-  const flowRowsSummary = (() => {
-    if (!activeReportId) return [];
-    const report = loadReport(activeReportId);
-    const table = normalizeFunnelTableForReport(report);
-    const rows = table?.rows || [];
-    if (!rows.length) return [];
-    const counts = new Map();
-    rows.forEach((row) => {
-      const key = String(row?.flow || row?.sourceFile || 'Onbekende flow').trim();
-      counts.set(key, (counts.get(key) || 0) + 1);
+  const allLiveFlows = useMemo(() => {
+    const items = [];
+    reports.forEach((report) => {
+      const table = normalizeFunnelTableForReport(report);
+      const rows = table?.rows || [];
+      if (!rows.length) return;
+      const counts = new Map();
+      rows.forEach((row) => {
+        const name = String(row?.flow || row?.sourceFile || 'Onbekende flow').trim();
+        counts.set(name, (counts.get(name) || 0) + 1);
+      });
+      counts.forEach((count, flowName) => {
+        items.push({
+          key: `${report.id}::${flowName}`,
+          reportId: report.id,
+          reportTitle: report.title,
+          flowName,
+          rowCount: count,
+        });
+      });
     });
-    return [...counts.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-  })();
+    return items.sort((a, b) => {
+      if (a.reportTitle !== b.reportTitle) {
+        return a.reportTitle.localeCompare(b.reportTitle, 'nl-NL');
+      }
+      return a.flowName.localeCompare(b.flowName, 'nl-NL');
+    });
+  }, [reports]);
 
   const syncTitleWithPendoSelection = useCallback(
     (name) => {
@@ -350,35 +364,6 @@ export default function UploadPage() {
     [activeReportId, bumpReports, flashSaved, selectedCatalogEntry]
   );
 
-  const handleDeleteFlow = useCallback(
-    (flowName) => {
-      if (!activeReportId) return;
-      const report = loadReport(activeReportId);
-      const table = normalizeFunnelTableForReport(report);
-      const rows = table?.rows || [];
-      if (!rows.length) return;
-      const nextRows = rows.filter(
-        (row) => String(row?.flow || row?.sourceFile || 'Onbekende flow').trim() !== flowName
-      );
-      const nextFunnel =
-        nextRows.length > 0
-          ? {
-              fields: table?.columns || Object.keys(nextRows[0] || {}),
-              rows: nextRows,
-            }
-          : null;
-      const saved = persistReportPatch(activeReportId, { funnel: nextFunnel });
-      if (!saved.ok) {
-        setManualCsvError(saved.message || 'Flow verwijderen mislukt.');
-        return;
-      }
-      setManualCsvError(null);
-      bumpReports();
-      flashSaved(`Flow verwijderd: ${flowName}`);
-    },
-    [activeReportId, bumpReports, flashSaved]
-  );
-
   const handleDeleteAllFlows = useCallback(() => {
     if (!activeReportId) return;
     const saved = persistReportPatch(activeReportId, { funnel: null });
@@ -390,6 +375,86 @@ export default function UploadPage() {
     bumpReports();
     flashSaved('Alle flows verwijderd uit dit dashboard.');
   }, [activeReportId, bumpReports, flashSaved]);
+
+  const toggleLiveFlowSelection = useCallback((flowKey) => {
+    setSelectedLiveFlowKeys((prev) =>
+      prev.includes(flowKey) ? prev.filter((k) => k !== flowKey) : [...prev, flowKey]
+    );
+  }, []);
+
+  const handleDeleteSelectedLiveFlows = useCallback(() => {
+    if (!selectedLiveFlowKeys.length) return;
+    const grouped = new Map();
+    selectedLiveFlowKeys.forEach((key) => {
+      const [reportId, ...nameParts] = String(key).split('::');
+      const flowName = nameParts.join('::');
+      if (!reportId || !flowName) return;
+      if (!grouped.has(reportId)) grouped.set(reportId, new Set());
+      grouped.get(reportId).add(flowName);
+    });
+
+    for (const [reportId, flowNames] of grouped.entries()) {
+      const report = loadReport(reportId);
+      const table = normalizeFunnelTableForReport(report);
+      const rows = table?.rows || [];
+      if (!rows.length) continue;
+      const nextRows = rows.filter((row) => {
+        const rowFlow = String(row?.flow || row?.sourceFile || 'Onbekende flow').trim();
+        return !flowNames.has(rowFlow);
+      });
+      const nextFunnel =
+        nextRows.length > 0
+          ? {
+              fields: table?.columns || Object.keys(nextRows[0] || {}),
+              rows: nextRows,
+            }
+          : null;
+      const saved = persistReportPatch(reportId, { funnel: nextFunnel });
+      if (!saved.ok) {
+        setManualCsvError(saved.message || 'Geselecteerde flows verwijderen mislukt.');
+        return;
+      }
+    }
+
+    setManualCsvError(null);
+    setSelectedLiveFlowKeys([]);
+    bumpReports();
+    flashSaved('Geselecteerde flows verwijderd.');
+  }, [bumpReports, flashSaved, selectedLiveFlowKeys]);
+
+  const handleDeleteSingleLiveFlow = useCallback(
+    (flowKey) => {
+      setSelectedLiveFlowKeys([flowKey]);
+      const [reportId, ...nameParts] = String(flowKey).split('::');
+      const flowName = nameParts.join('::');
+      if (!reportId || !flowName) return;
+      const report = loadReport(reportId);
+      const table = normalizeFunnelTableForReport(report);
+      const rows = table?.rows || [];
+      if (!rows.length) return;
+      const nextRows = rows.filter((row) => {
+        const rowFlow = String(row?.flow || row?.sourceFile || 'Onbekende flow').trim();
+        return rowFlow !== flowName;
+      });
+      const nextFunnel =
+        nextRows.length > 0
+          ? {
+              fields: table?.columns || Object.keys(nextRows[0] || {}),
+              rows: nextRows,
+            }
+          : null;
+      const saved = persistReportPatch(reportId, { funnel: nextFunnel });
+      if (!saved.ok) {
+        setManualCsvError(saved.message || 'Flow verwijderen mislukt.');
+        return;
+      }
+      setManualCsvError(null);
+      setSelectedLiveFlowKeys([]);
+      bumpReports();
+      flashSaved(`Flow verwijderd: ${flowName}`);
+    },
+    [bumpReports, flashSaved]
+  );
 
 
   useEffect(() => {
@@ -767,37 +832,49 @@ export default function UploadPage() {
 
       <section className="panel">
         <h2 className="panel__title">Flows beheren</h2>
-        {!activeReportId && (
-          <p className="panel__status">Kies eerst een dashboard.</p>
+        {allLiveFlows.length === 0 && (
+          <p className="panel__status">Nog geen flows gevonden.</p>
         )}
-        {activeReportId && flowRowsSummary.length === 0 && (
-          <p className="panel__status">Nog geen flows in dit dashboard.</p>
-        )}
-        {activeReportId && flowRowsSummary.length > 0 && (
+        {allLiveFlows.length > 0 && (
           <>
             <div className="upload-row" style={{ marginBottom: '12px' }}>
               <button
                 type="button"
                 className="btn btn--secondary"
                 onClick={handleDeleteAllFlows}
+                disabled={!activeReportId}
               >
-                Alle flows verwijderen
+                Alle flows uit actief dashboard verwijderen
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleDeleteSelectedLiveFlows}
+                disabled={!selectedLiveFlowKeys.length}
+              >
+                Geselecteerde flows verwijderen
               </button>
             </div>
             <ul className="pendo-catalog__list">
-              {flowRowsSummary.map((flow) => (
-                <li key={flow.name}>
+              {allLiveFlows.map((flow) => (
+                <li key={flow.key}>
                   <div className="pendo-catalog__row">
+                    <input
+                      type="checkbox"
+                      checked={selectedLiveFlowKeys.includes(flow.key)}
+                      onChange={() => toggleLiveFlowSelection(flow.key)}
+                    />
                     <span className="pendo-catalog__row-main">
-                      <span className="pendo-catalog__name">{flow.name}</span>
+                      <span className="pendo-catalog__name">{flow.flowName}</span>
                       <span className="pendo-catalog__meta">
-                        <span className="pendo-catalog__id">{flow.count} rijen</span>
+                        <span className="pendo-catalog__id">{flow.reportTitle}</span>
+                        <span className="pendo-catalog__id">{flow.rowCount} rijen</span>
                       </span>
                     </span>
                     <button
                       type="button"
                       className="btn btn--secondary btn--small"
-                      onClick={() => handleDeleteFlow(flow.name)}
+                      onClick={() => handleDeleteSingleLiveFlow(flow.key)}
                     >
                       Verwijderen
                     </button>
