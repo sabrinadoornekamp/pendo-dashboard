@@ -56,7 +56,7 @@ export default function UploadPage() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(null);
 
-  const [reportsRev, setReportsRev] = useState(0);
+  const [, setReportsRev] = useState(0);
   const reports = listReportsSorted();
   const reportFromUrl = searchParams.get('report') || '';
 
@@ -144,7 +144,7 @@ export default function UploadPage() {
     [analyzedPendoCatalog, selectedCatalogId]
   );
 
-  const flowRowsSummary = useMemo(() => {
+  const flowRowsSummary = (() => {
     if (!activeReportId) return [];
     const report = loadReport(activeReportId);
     const table = normalizeFunnelTableForReport(report);
@@ -158,7 +158,7 @@ export default function UploadPage() {
     return [...counts.entries()]
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
-  }, [activeReportId, reportsRev, saveMessage]);
+  })();
 
   const syncTitleWithPendoSelection = useCallback(
     (name) => {

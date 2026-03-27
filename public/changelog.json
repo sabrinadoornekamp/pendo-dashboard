@@ -1,8 +1,14 @@
 {
-  "generatedAt": "2026-03-26T12:20:37.288Z",
+  "generatedAt": "2026-03-27T09:23:19.467Z",
   "source": "git",
   "repositoryUrl": "https://github.com/sabrinadoornekamp/pendo-dashboard",
   "commits": [
+    {
+      "hash": "e9599debe2ede84aa343ad3b74ee6dec5e89d3f4",
+      "shortHash": "e9599de",
+      "date": "2026-03-27T09:17:17.000Z",
+      "subject": "refactor(upload): simplify Pendo flow and strengthen manual uploads"
+    },
     {
       "hash": "14fde6b1b3968b0b882589a94ec269730729aff4",
       "shortHash": "14fde6b",
