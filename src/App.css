@@ -391,12 +391,20 @@
 .select-input {
   width: 100%;
   max-width: 420px;
-  padding: 0.55rem 0.75rem;
+  padding: 0.625rem 0.875rem;
+  min-height: 40px;
+  line-height: 1.35;
   font-size: 0.95rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   background: #fff;
   color: #111827;
+}
+
+.select-input:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+  border-color: #3b82f6;
 }
 
 .report-picker {
@@ -1717,4 +1725,71 @@
 
 .pendo-catalog__apply {
   margin-top: 1rem;
+}
+
+/* Upload page spacing aligned with Material-style 8pt grid */
+.page--upload .panel {
+  padding: 24px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+}
+
+.page--upload .pendo-catalog__controls {
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.page--upload .upload-row {
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.page--upload .field-label {
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.page--upload .report-new-block .field-label + .field-label,
+.page--upload .report-title-edit .field-label + .field-label {
+  margin-top: 16px;
+}
+
+.page--upload .report-picker {
+  margin-bottom: 16px;
+}
+
+.page--upload .report-new-row {
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.page--upload .report-picker .field-label,
+.page--upload .report-new-block .field-label,
+.page--upload .report-title-edit .field-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.page--upload .report-picker .select-input,
+.page--upload .report-new-block .select-input,
+.page--upload .report-title-edit .select-input {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+/* Material-like spacing rhythm in dashboard picker */
+.page--upload .panel--dashboard-pick .panel__title {
+  margin-bottom: 16px;
+}
+
+.page--upload .panel--dashboard-pick .panel__status {
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.page--upload .panel--dashboard-pick .report-picker {
+  margin-top: 8px;
 }

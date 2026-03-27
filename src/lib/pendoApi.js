@@ -116,12 +116,16 @@ async function fetchPendo(path, apiKey, signal) {
   return fetchPendoFromBase(base, path, apiKey, signal);
 }
 
+function appendNoCacheTs(rawUrl) {
+  const sep = rawUrl.includes('?') ? '&' : '?';
+  return `${rawUrl}${sep}_ts=${Date.now()}`;
+}
+
 async function fetchPendoFromBase(base, path, apiKey, signal, options = {}) {
   const method = String(options.method || 'GET').toUpperCase();
   const bodyPayload = options.body;
   const rawUrl = `${base}${path.startsWith('/') ? path : `/${path}`}`;
-  const sep = rawUrl.includes('?') ? '&' : '?';
-  const url = `${rawUrl}${sep}_ts=${Date.now()}`;
+  const url = appendNoCacheTs(rawUrl);
   const headers = {
     accept: 'application/json',
     'x-pendo-integration-key': apiKey,
@@ -146,6 +150,60 @@ async function fetchPendoFromBase(base, path, apiKey, signal, options = {}) {
     throw new Error(`${String(msg)} (${url})`);
   }
   return body;
+}
+
+/**
+ * Haal een specifieke CSV-export op via Pendo endpoint-path.
+ * Voorbeelden: "/report/<id>/export?format=csv" of "/aggregation/export?...".
+ */
+export async function fetchPendoCsvFromPath(path, apiKey, signal) {
+  const cleanPath = String(path || '').trim();
+  if (!cleanPath) {
+    throw new Error('CSV-path ontbreekt.');
+  }
+  if (/^https?:\/\//i.test(cleanPath)) {
+    throw new Error(
+      'Gebruik een endpoint-path (bijv. /report/<id>/export?format=csv), geen volledige URL.'
+    );
+  }
+
+  const bases = [getPendoScopedApiRoot(), getPendoApiRoot()].filter(Boolean);
+  let lastErr = null;
+
+  for (const base of bases) {
+    const rawUrl = `${base}${cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`}`;
+    const url = appendNoCacheTs(rawUrl);
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const res = await fetch(url, {
+        method: 'GET',
+        signal,
+        cache: 'no-store',
+        headers: {
+          accept: 'text/csv,application/csv,text/plain,application/octet-stream',
+          'x-pendo-integration-key': apiKey,
+        },
+      });
+      // eslint-disable-next-line no-await-in-loop
+      const text = await res.text();
+      if (!res.ok) {
+        const msg = text?.trim() || `Pendo API-fout (${res.status})`;
+        throw new Error(`${msg} (${url})`);
+      }
+      if (!text || !text.trim()) {
+        throw new Error(`Lege CSV-response (${url})`);
+      }
+      return text;
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e?.message || '');
+      if (msg.includes('(404') || msg.includes('(403') || msg.includes('(422')) {
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr || new Error('CSV ophalen uit Pendo mislukte.');
 }
 
 /**
